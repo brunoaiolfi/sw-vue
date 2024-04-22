@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const apiStarWars = axios.create({
-    baseURL: "https://swapi.dev/api/"
+    baseURL: "https://swapi.py4e.com/api/"
 })
 
 export const limit = 10
