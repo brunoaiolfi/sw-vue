@@ -16,9 +16,9 @@ const isLoading = ref(false),
 
 onMounted(() => {
   const characters = JSON.parse(localStorage.getItem('characters') ?? '[]')
+
   allCharacters.push(...characters);
   setCharactersToShow(characters)
-  console.log(characters)
 
   if (!characters.length) recursiveGetRequests();
 })
@@ -34,10 +34,10 @@ const recursiveGetRequests = async (page = 1, characters: CharacterType[] = []):
       return recursiveGetRequests(page + 1, characters);
     } else {
       localStorage.setItem('characters', JSON.stringify(characters));
-      
+
       allCharacters.push(...characters)
       setCharactersToShow(characters)
-      
+
       isLoading.value = false
     }
   } catch (error) {
@@ -49,9 +49,10 @@ const onReachEnd = async () => {
   page.value += 1;
 
   if ((charactersToShow.length % limit) !== 0) return;
+
   const result = await getData(page.value, search.value);
   setCharactersToShow(result, page.value)
-} 
+}
 
 const onChangeSearch = (async (event: Event) => {
   try {
@@ -67,7 +68,7 @@ const onChangeSearch = (async (event: Event) => {
 
     const result = await getData(page.value, searchFor)
     setCharactersToShow(result, page.value)
-    
+
   } catch (error) {
     alert(`Erro ao buscar por personagens ${error}`)
   }
@@ -92,29 +93,33 @@ const setCharactersToShow = (newCharacters: CharacterType[], page = 1) => {
   page === 1 ? charactersToShow.splice(0, charactersToShow.length, ...newCharacters) : charactersToShow.push(...newCharacters);
 }
 
-const handleSelectCharacter = async (character: CharacterType)=>  {
+const handleSelectCharacter = async (character: CharacterType) => {
   try {
-    const { films: filmsRequestURLS  } = character;
+    const { films: filmsRequestURLS } = character;
 
-    const films : string[] = await Promise.all(filmsRequestURLS.map(async (f) => {
-        const res = await getFilm(f);
-        return res.title;
+    const films: string[] = await Promise.all(filmsRequestURLS.map(async (f) => {
+
+      if (!f) return 'Filme não encontrado';
+
+      const res = await getFilm(f);
+      return res.title;
     }))
 
     characterSelected.value = character;
     characterSelected.value.films = films;
+
   } catch (error) {
     alert('Erro ao buscar personagem')
   }
 }
 
 const getFilm = async (baseurl: string) => {
-    const {data} = await apiStarWars({
-      method: 'GET',
-      baseURL: baseurl
-    })
+  const { data } = await apiStarWars({
+    method: 'GET',
+    baseURL: baseurl
+  })
 
-    return data
+  return data
 }
 
 </script>
@@ -132,10 +137,10 @@ const getFilm = async (baseurl: string) => {
   <container>
     <TextInput placeholder="Pesquisar personagem" :onChange="onChangeSearch" />
 
-    <p> Total: {{charactersToShow.length}}</p>
-    <CharactersList :characters="charactersToShow" :onReachEnd="onReachEnd" :onSelectCharacter="handleSelectCharacter"/>
-    
-    <Character v-if="characterSelected?.name" :character="characterSelected"/>
+    <p> Total: {{ charactersToShow.length }}</p>
+    <CharactersList :characters="charactersToShow" :onReachEnd="onReachEnd" :onSelectCharacter="handleSelectCharacter" />
+
+    <Character v-if="characterSelected?.name" :character="characterSelected" />
   </container>
 </template>
 
