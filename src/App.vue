@@ -1,19 +1,57 @@
-<script setup lang="ts">
+<script async setup lang="ts">
 
-import { reactive, ref } from "vue";
-import TextInput from "./components/forms/inputs/TextInput.vue";
+import { onMounted, reactive, ref } from "vue";
 import { apiStarWars, limit } from "./infra/axios/api";
-import type { Character as TypeCharacter } from "@/@types/models/characters";
+import type { Character as CharacterType } from '@/@types/models/characters';
 import CharactersList from "./components/characters/list/CharactersList.vue";
+import TextInput from "./components/forms/inputs/TextInput.vue";
 import Character from "./components/characters/Character.vue";
-import Spinner from "./components/forms/spinner/Spinner.vue";
 
-const search = ref(""),
-  isLoading = ref(false),
+const isLoading = ref(false),
   page = ref(1),
-  characters = reactive<TypeCharacter[]>([]);
+  search = ref(""),
+  characterSelected = ref<CharacterType>({} as CharacterType),
+  allCharacters = reactive<CharacterType[]>([]),
+  charactersToShow = reactive<CharacterType[]>([]);
 
-let characterSelect = reactive<TypeCharacter>({} as TypeCharacter);
+onMounted(() => {
+  const characters = JSON.parse(localStorage.getItem('characters') ?? '[]')
+  allCharacters.push(...characters);
+  setCharactersToShow(characters)
+  console.log(characters)
+
+  if (!characters.length) recursiveGetRequests();
+})
+
+const recursiveGetRequests = async (page = 1, characters: CharacterType[] = []): Promise<void> => {
+  try {
+    isLoading.value = true;
+    const response = await getData(page);
+
+    characters.push(...response);
+
+    if (characters.length % limit === 0) {
+      return recursiveGetRequests(page + 1, characters);
+    } else {
+      localStorage.setItem('characters', JSON.stringify(characters));
+      
+      allCharacters.push(...characters)
+      setCharactersToShow(characters)
+      
+      isLoading.value = false
+    }
+  } catch (error) {
+    alert('Ocorreu um erro ao buscar os personagens!')
+  }
+};
+
+const onReachEnd = async () => {
+  page.value += 1;
+
+  if ((charactersToShow.length % limit) !== 0) return;
+  const result = await getData(page.value, search.value);
+  setCharactersToShow(result, page.value)
+} 
 
 const onChangeSearch = (async (event: Event) => {
   try {
@@ -21,87 +59,83 @@ const onChangeSearch = (async (event: Event) => {
 
     search.value = searchFor;
     page.value = 1;
-    const result = await getCharacters(searchFor, 1)
 
-    addCharacter(result)
+    if (!searchFor) {
+      setCharactersToShow(allCharacters, 1)
+      return;
+    }
+
+    const result = await getData(page.value, searchFor)
+    setCharactersToShow(result, page.value)
+    
   } catch (error) {
     alert(`Erro ao buscar por personagens ${error}`)
   }
 })
 
-const getCharacters = (async (search?: string, page = 1) => {
+const getData = async (page = 1, search = "") => {
   try {
-    isLoading.value = true;
-
     const { data } = await apiStarWars.get(`people`, {
       params: {
-        search,
         page,
+        search
       }
     });
 
     return data.results
-  } catch (error) {
-    alert(`Erro ao buscar por personagens ${error}`)
-  } finally {
-    isLoading.value = false;
+  } catch (error: any) {
+    throw new Error(error)
   }
-})
-
-const onReachEnd = async () => {
-  page.value += 1;
-
-  if ((characters.length % limit) !== 0) return;
-
-  const newcharacters = await getCharacters(search.value, page.value);
-  addCharacter(newcharacters);
 }
 
-const addCharacter = (newCharacters: TypeCharacter[]) => {
-  page.value == 1 ? characters.splice(0, characters.length, ...newCharacters) : characters.push(...newCharacters);
+const setCharactersToShow = (newCharacters: CharacterType[], page = 1) => {
+  page === 1 ? charactersToShow.splice(0, charactersToShow.length, ...newCharacters) : charactersToShow.push(...newCharacters);
 }
 
-const clearSearch = () => {
-  search.value = ""
-  page.value = 1;
-  characters.splice(0, characters.length)
+const handleSelectCharacter = async (character: CharacterType)=>  {
+  try {
+    const { films: filmsRequestURLS  } = character;
+
+    const films : string[] = await Promise.all(filmsRequestURLS.map(async (f) => {
+        const res = await getFilm(f);
+        return res.title;
+    }))
+
+    characterSelected.value = character;
+    characterSelected.value.films = films;
+  } catch (error) {
+    alert('Erro ao buscar personagem')
+  }
 }
 
-const selectCharacter = (character: TypeCharacter) => {
-  characterSelect = character;
-  clearSearch();
+const getFilm = async (baseurl: string) => {
+    const {data} = await apiStarWars({
+      method: 'GET',
+      baseURL: baseurl
+    })
+
+    return data
 }
 
 </script>
 
 <template>
   <header>
-    <img alt="Vue logo" src="./assets/images/star-wars-logo.png" />
+    <img alt="Star wars logo" src="./assets/images/star-wars-logo.png" />
   </header>
+
+  <container class="loading" v-if="isLoading">
+    <Spinner />
+    <p>Carregando</p>
+  </container>
 
   <container>
     <TextInput placeholder="Pesquisar personagem" :onChange="onChangeSearch" />
 
-    <section class="filterSection">
-
-      <div v-if="!!search" class="filteredBy">
-        <p>Filtrado por: {{ search }}</p>
-      </div>
-
-      <button v-if="!!search || !!characters.length" class="clearSection" :onClick="clearSearch">
-        <p>{{ characters.length }} resultado(s)</p>
-        <img alt="Vue logo" class="logo" src="./assets/close.svg" width="24" height="24" />
-      </button>
-
-      <div class="loadingContainer">
-        <Spinner v-if="isLoading" />
-      </div>
-    </section>
-
-    <CharactersList :characters="characters" :onSelectCharacter="selectCharacter" :onReachEnd="onReachEnd" />
-
-    <Character :character="characterSelect"/>
-
+    <p> Total: {{charactersToShow.length}}</p>
+    <CharactersList :characters="charactersToShow" :onReachEnd="onReachEnd" :onSelectCharacter="handleSelectCharacter"/>
+    
+    <Character v-if="characterSelected?.name" :character="characterSelected"/>
   </container>
 </template>
 
@@ -115,59 +149,12 @@ header {
   margin-bottom: 2rem;
 }
 
-.filterSection {
-  width: 100%;
-
-  margin: 8px 0;
-
+.loading {
   display: flex;
-  align-items: center;
-
-  gap: 8px;
-
-}
-
-.clearSection {
-  height: 2.5rem;
-
-  background-color: var(--vt-c-black-soft);
-  text-align: center;
-
-  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
 
-  gap: 8px;
-
-  padding: 0 4px 0 8px;
-
-  border-radius: 4px;
-  border: 1px solid var(--vt-c-danger);
-
-  color: var(--vt-c-danger);
-
-  cursor: pointer;
-}
-
-.filteredBy {
-  height: 2.5rem;
-
-  background-color: var(--vt-c-black-soft);
-  text-align: center;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  padding: 0 18px;
-
-  border-radius: 999px;
-
-}
-
-.loadingContainer {
-  height: 24px;
-
-  margin-left: auto;
+  margin-top: 48px;
 }
 </style>

@@ -9,11 +9,11 @@ defineProps<{
 
 <template>
     <h1>{{ character.name }}</h1>
-
     <p>Ano: {{ character.birth_year }}</p>
     <p>Cor dos olhos: {{ character.eye_color }}</p>
     <p>Genero: {{ character.gender }}</p>
-
+    <br>
+    <h1>Filmes:</h1>
     <p v-for="film in character.films">
         {{film}}
     </p>

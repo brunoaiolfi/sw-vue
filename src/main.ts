@@ -1,9 +1,7 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-import Caching from './screens/caching/Caching.vue'
-import { router } from './router';
+import App from './App.vue';
 
-createApp(Caching)
-    .use(router)
+createApp(App)
     .mount('#app')
