@@ -12,7 +12,7 @@ defineProps<{
 <template>
     <ul @scrollend="onReachEnd" class="charactersList">
         <li class="characterContainer"  v-for="character in characters" :key="character.name">
-            <h2 class="name" :onclick="() => onSelectCharacter(character)"> {{ character.name }} </h2>
+            <h2 class="name" :onclick="() => onSelectCharacter({...character})"> {{ character.name }} </h2>
         </li>
     </ul>
 </template>

@@ -6,6 +6,7 @@ import type { Character as CharacterType } from '@/@types/models/characters';
 import CharactersList from "./components/characters/list/CharactersList.vue";
 import TextInput from "./components/forms/inputs/TextInput.vue";
 import Character from "./components/characters/Character.vue";
+import Spinner from "./components/forms/spinner/Spinner.vue";
 
 const isLoading = ref(false),
   page = ref(1),
@@ -95,6 +96,8 @@ const setCharactersToShow = (newCharacters: CharacterType[], page = 1) => {
 
 const handleSelectCharacter = async (character: CharacterType) => {
   try {
+    if (characterSelected.value.name === character.name) return;
+
     const { films: filmsRequestURLS } = character;
 
     const films: string[] = await Promise.all(filmsRequestURLS.map(async (f) => {
