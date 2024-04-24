@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { Character } from '@/@types/models/characters';
+import type { ICharacterToShow } from '@/@types/models/characters';
 
 defineProps<{
-    characters: Character[]
-    onSelectCharacter: (character: Character) => void
+    characters: ICharacterToShow[]
+    onSelectCharacter: (character: ICharacterToShow) => void
     onReachEnd: () => void;
 }>()
 

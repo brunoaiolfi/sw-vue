@@ -15,7 +15,7 @@ defineProps<{
     <br>
     <h1>Filmes:</h1>
     <p v-for="film in character.films">
-        {{film}}
+        {{film.title}} - {{film.release_date}}
     </p>
 </template>
 

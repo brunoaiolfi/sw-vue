@@ -2,18 +2,19 @@
 
 import { onMounted, reactive, ref } from "vue";
 import { apiStarWars, limit } from "./infra/axios/api";
-import type { Character as CharacterType } from '@/@types/models/characters';
+import type { Character as CharacterType, ICharacterToShow } from '@/@types/models/characters';
 import CharactersList from "./components/characters/list/CharactersList.vue";
 import TextInput from "./components/forms/inputs/TextInput.vue";
 import Character from "./components/characters/Character.vue";
 import Spinner from "./components/forms/spinner/Spinner.vue";
+import type { Films } from "./@types/models/films";
 
 const isLoading = ref(false),
   page = ref(1),
   search = ref(""),
   characterSelected = ref<CharacterType>({} as CharacterType),
-  allCharacters = reactive<CharacterType[]>([]),
-  charactersToShow = reactive<CharacterType[]>([]);
+  allCharacters = reactive<ICharacterToShow[]>([]),
+  charactersToShow = reactive<ICharacterToShow[]>([]);
 
 onMounted(() => {
   const characters = JSON.parse(localStorage.getItem('characters') ?? '[]')
@@ -24,7 +25,7 @@ onMounted(() => {
   if (!characters.length) recursiveGetRequests();
 })
 
-const recursiveGetRequests = async (page = 1, characters: CharacterType[] = []): Promise<void> => {
+const recursiveGetRequests = async (page = 1, characters: ICharacterToShow[] = []): Promise<void> => {
   try {
     isLoading.value = true;
     const response = await getData(page);
@@ -90,26 +91,23 @@ const getData = async (page = 1, search = "") => {
   }
 }
 
-const setCharactersToShow = (newCharacters: CharacterType[], page = 1) => {
+const setCharactersToShow = (newCharacters: ICharacterToShow[], page = 1) => {
   page === 1 ? charactersToShow.splice(0, charactersToShow.length, ...newCharacters) : charactersToShow.push(...newCharacters);
 }
 
-const handleSelectCharacter = async (character: CharacterType) => {
+const handleSelectCharacter = async (character: ICharacterToShow) => {
   try {
     if (characterSelected.value.name === character.name) return;
 
     const { films: filmsRequestURLS } = character;
 
-    const films: string[] = await Promise.all(filmsRequestURLS.map(async (f) => {
-
-      if (!f) return 'Filme não encontrado';
+    const films: Films[] = await Promise.all(filmsRequestURLS.map(async (f) => {
 
       const res = await getFilm(f);
-      return res.title;
+      return res;
     }))
 
-    characterSelected.value = character;
-    characterSelected.value.films = films;
+    characterSelected.value = {...character, films};
 
   } catch (error) {
     alert('Erro ao buscar personagem')
